@@ -10,9 +10,15 @@
 #SBATCH --mem-per-cpu=1200
 #SBATCH --gres=gpu:v100:4
 
+echo "Cleaning binaries and compiling again"
+make clean;make -j 
+
+echo "Starting Benchmark"
 date
 
-export DATASET=/home/vsm2/dataset
+export DATASET=/home/vsm2/SpDNN_Challenge2020/iostream/dataset
+#export DATASET=/home/vsm2/dataset
+
 #1024 4096 16384 65536
 #export NEURON=65536
 #-0.3 -0.35 -0.4 -0.45

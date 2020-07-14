@@ -1,8 +1,21 @@
 # Dataset:
+There are two ways to get the dataset. 
 
-Download the dataset from: https://uofi.box.com/s/gseet60dz0f939r6n69veggn80i9twwh 
+## Option 1
+We provide converted files that are dervied from the Graph Challenge website over a Box. This can be downloaded from (Total of ~90GB): 
+[BoxFolder](https://uofi.box.com/s/gseet60dz0f939r6n69veggn80i9twwh)
 
-Untar all the files present inside the dataset. 
+After download is complete, untar all the files present inside the dataset. 
+
+## Option 2
+Automatic download and compilation (requires gzip and tar support).
+Space Required: ~300GB. Post processing ~90GB. 
+
+```
+mkdir dataset
+cd dataset
+bash ../download.sh
+```
 
 # Dependencies
 
