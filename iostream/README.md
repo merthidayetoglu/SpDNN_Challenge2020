@@ -1,4 +1,4 @@
-# Dataset:
+# Dataset 
 There are two ways to get the dataset. 
 
 ## Option 1
