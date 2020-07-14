@@ -40,7 +40,7 @@ gzip -d sparse-images-16384.tsv.gz
 gzip -d sparse-images-65536.tsv.gz
 
 echo "Converting Sparse Images to Binary" 
-g++ convert_sparses.cpp -o convertimages
+g++ ../convert_sparses.cpp -o convertimages
 ./convertimages 1024
 ./convertimages 4096
 ./convertimages 16384
@@ -54,7 +54,7 @@ tar vxfz neuron65536.tar.gz
 
 
 echo "Converting Weights to Binary"
-g++ convert_weights.cpp -o convertneuron 
+g++ ../convert_weights.cpp -o convertneuron 
 ./convertneuron 1024
 ./convertneuron 4096
 ./convertneuron 16384
