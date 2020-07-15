@@ -33,6 +33,9 @@ extern int *batchdispl;
 extern int mybatch;
 extern int extbatch;
 
+extern double timekernel;
+extern double timestream;
+
 int **csrdispl_d;
 INDPREC **csrindex_d;
 VALPREC **csrvalue_d;
@@ -47,10 +50,15 @@ VALPREC **warpvalue;
 int **buffdispl_d;
 int **mapdispl_d;
 int **warpdispl_d;
+MAPPREC *mapbuff_d;
+INDPREC *indbuff_d;
+VALPREC *valbuff_d;;
 #ifdef OUTOFCORE
-MAPPREC *map_d;
-INDPREC *warpindex_d;
-VALPREC *warpvalue_d;
+#ifdef OVERLAP
+MAPPREC *mapstream_d;
+INDPREC *indstream_d;
+VALPREC *valstream_d;
+#endif
 #else
 MAPPREC **map_d;
 INDPREC **warpindex_d;
@@ -68,6 +76,7 @@ int numwarp;
 int buffsize;
 
 cudaEvent_t start, stop;
+cudaStream_t stream;
 float elapsedTime;
 
 __device__ float __ReLU(float x){
@@ -126,6 +135,9 @@ void setup_gpu(){
     printf("Warp size: %d\n",deviceProp.warpSize);
     printf("\n");
   }
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaStreamCreate(&stream);
 
   char *chartemp;
   chartemp = getenv("BLOCKSIZE");
@@ -163,6 +175,17 @@ void setup_gpu(){
   cudaMemset(categories_d,0,sizeof(int)*extbatch);
   cudaMemcpy(active_d,active,sizeof(int)*mybatch,cudaMemcpyHostToDevice);
   cudaMemcpy(categories_d,categories,sizeof(int)*mybatch,cudaMemcpyHostToDevice);
+
+  #ifdef OUTOFCORE
+  if(myid==0)printf("OUT OF CORE IS ENABLED\n");
+  #ifdef OVERLAP
+  if(myid==0)printf("OVERLAPPING IS ENABLED\n");
+  #else
+  if(myid==0)printf("OVERLAPPING IS DISABLED\n");
+  #endif
+  #else
+  if(myid==0)printf("OUT OF CORE IS DISABLED\n");
+  #endif
 
   double memweight = 0.0;
   double memdispl = 0.0;
@@ -208,14 +231,27 @@ void setup_gpu(){
     #endif
   }
   #ifdef OUTOFCORE
+  if(myid==0)printf("\n");
   if(myid==0)printf("mapsizemax: %d (%f KB)\n",mapsizemax,sizeof(MAPPREC)*mapsizemax/1.0e6);
-  cudaMalloc((void**)&map_d,sizeof(MAPPREC)*mapsizemax);
-  memmap += sizeof(MAPPREC)*mapsizemax/1.0e9;
   if(myid==0)printf("weightsizemax: %d (%f KB)\n",weightsizemax,(sizeof(INDPREC)+sizeof(VALPREC))*weightsizemax/1.0e6);
-  cudaMalloc((void**)&warpindex_d,sizeof(INDPREC)*weightsizemax);
-  cudaMalloc((void**)&warpvalue_d,sizeof(VALPREC)*weightsizemax);
+  #ifdef OVERLAP
+  cudaMalloc((void**)&mapstream_d,sizeof(MAPPREC)*mapsizemax*2);
+  cudaMalloc((void**)&indstream_d,sizeof(INDPREC)*weightsizemax*2);
+  cudaMalloc((void**)&valstream_d,sizeof(VALPREC)*weightsizemax*2);
+  memmap += 2*sizeof(MAPPREC)*mapsizemax/1.0e9;
+  memweight += 2*sizeof(INDPREC)*weightsizemax/1.0e9;
+  memweight += 2*sizeof(VALPREC)*weightsizemax/1.0e9;
+  cudaMemcpyAsync(mapstream_d,map[0],sizeof(MAPPREC)*mapdispl[0][buffdispl[0][numblocks]],cudaMemcpyHostToDevice,stream);
+  cudaMemcpyAsync(indstream_d,warpindex[0],sizeof(INDPREC)*warpdispl[0][buffdispl[0][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,stream);
+  cudaMemcpyAsync(valstream_d,warpvalue[0],sizeof(VALPREC)*warpdispl[0][buffdispl[0][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,stream);
+  #else
+  cudaMalloc((void**)&mapbuff_d,sizeof(MAPPREC)*mapsizemax);
+  cudaMalloc((void**)&indbuff_d,sizeof(INDPREC)*weightsizemax);
+  cudaMalloc((void**)&valbuff_d,sizeof(VALPREC)*weightsizemax);
+  memmap += sizeof(MAPPREC)*mapsizemax/1.0e9;
   memweight += sizeof(INDPREC)*weightsizemax/1.0e9;
   memweight += sizeof(VALPREC)*weightsizemax/1.0e9;
+  #endif
   #endif
 
   double memfeat = 0.0;
@@ -239,6 +275,7 @@ void setup_gpu(){
   MPI_Allgather(&memfeat,1,MPI_DOUBLE,memfeats,1,MPI_DOUBLE,MPI_COMM_WORLD);
   if(myid==0){
     double memmax = 0.0;
+    printf("\n");
     for(int p = 0; p < numproc; p++){
       double memtot = memdispls[p]+memmaps[p]+memweights[p]+memfeats[p];
       printf("GPU %d: OTHERS: %f DISPLS: %f MAPS: %f WEIGHTS: %f FEATURES: %f TOTAL: %f GB\n",p,memothers[p],memdispls[p],memmaps[p],memweights[p],memfeats[p],memtot);
@@ -246,34 +283,43 @@ void setup_gpu(){
     }
     printf("MAX GPU MEM: %f GB\n",memmax);
   }
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
 }
 
 void infer_gpu(int l){
-  extern double timekernel;
-  extern double timestream;
   dim3 block(blocksize);
   dim3 grid(numblocks,(mybatch+MINIBATCH-1)/MINIBATCH);
 
-  #ifdef OUTOFCORE
-  double streamtime = MPI_Wtime();
-  int weightsize = warpdispl[l][buffdispl[l][numblocks]*numwarp]*WARPSIZE;
-  cudaMemcpy(warpindex_d,warpindex[l],sizeof(INDPREC)*weightsize,cudaMemcpyHostToDevice);
-  cudaMemcpy(warpvalue_d,warpvalue[l],sizeof(VALPREC)*weightsize,cudaMemcpyHostToDevice);
-  int mapsize = mapdispl[l][buffdispl[l][numblocks]];
-  cudaMemcpy(map_d,map[l],sizeof(MAPPREC)*mapsize,cudaMemcpyHostToDevice);
-  timestream += MPI_Wtime()-streamtime;
-  #endif
-
   cudaMemset(active_d,0,sizeof(int)*mybatch);
 
-  cudaEventRecord(start);
   #ifdef OUTOFCORE
-  dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],map_d,warpdispl_d[l],warpindex_d,warpvalue_d,bias,neuron,categories_d,active_d);
+  #ifdef OVERLAP
+  cudaStreamSynchronize(stream);
+  mapbuff_d = mapstream_d+l(l%2)*mapsizemax;
+  indbuff_d = indstream_d+l(l%2)*weightsizemax;
+  valbuff_d = valstream_d+l(l%2)*weightsizemax;
+  if(l+1 < layer){
+    cudaMemcpyAsync(mapstream_d+((l+1)%2)*mapsizemax,map[l+1],sizeof(MAPPREC)*mapdispl[l+1][buffdispl[l+1][numblocks]],cudaMemcpyHostToDevice,stream);
+    cudaMemcpyAsync(indstream_d,((l+1)%2)*weightsizemax,warpindex[l+1],sizeof(INDPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,stream);
+    cudaMemcpyAsync(valstream_d,((l+1)%2)*weightsizemax,warpvalue[l+1],sizeof(VALPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,stream);
+  }
   #else
-  dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],map_d[l],warpdispl_d[l],warpindex_d[l],warpvalue_d[l],bias,neuron,categories_d,active_d);
+  double streamtime = MPI_Wtime();
+  int weightsize = warpdispl[l][buffdispl[l][numblocks]*numwarp]*WARPSIZE;
+  cudaMemcpy(indbuff_d,warpindex[l],sizeof(INDPREC)*weightsize,cudaMemcpyHostToDevice);
+  cudaMemcpy(valbuff_d,warpvalue[l],sizeof(VALPREC)*weightsize,cudaMemcpyHostToDevice);
+  int mapsize = mapdispl[l][buffdispl[l][numblocks]];
+  cudaMemcpy(mapbuff_d,map[l],sizeof(MAPPREC)*mapsize,cudaMemcpyHostToDevice);
+  timestream += MPI_Wtime()-streamtime;
   #endif
+  #else
+  mapbuff_d = map_d[l];
+  indbuff_d = warpindex_d[l];
+  valbuff_d = warpvalue_d[l];
+  #endif
+
+
+  cudaEventRecord(start);
+  dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,neuron,categories_d,active_d);
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&elapsedTime,start,stop);
