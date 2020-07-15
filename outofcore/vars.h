@@ -15,6 +15,7 @@ void final_gpu();
 void infer_gpu(int);
 
 #define OUTOFCORE //COMMENT THIS OUT IF YOU HAVE ENOUGH MEMORY
+#define OVERLAP //WORKS ONLY WHEN OUTOFCORE IS ENABLED
 #define WARPSIZE 32
 #define MINIBATCH 12
 #define MAPPREC unsigned short
