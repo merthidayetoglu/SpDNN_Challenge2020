@@ -118,7 +118,8 @@ int main(int argc, char** argv) {
   timestream = 0;
   MPI_Barrier(MPI_COMM_WORLD);
   timeinfer = MPI_Wtime();
-  for(int l = 0; l < layer; l++){
+  // -1 copies layer 0 onto the GPU
+  for(int l = -1; l < layer; l++){
     infer_gpu(l);
   }
   MPI_Barrier(MPI_COMM_WORLD);

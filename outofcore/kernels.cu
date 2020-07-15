@@ -71,7 +71,8 @@ int numwarp;
 int buffsize;
 
 cudaEvent_t start, stop;
-cudaStream_t stream;
+cudaEvent_t copyStart, copyStop;
+cudaStream_t kernelStream, copyStream;
 float elapsedTime;
 
 __device__ float __ReLU(float x){
@@ -132,7 +133,10 @@ void setup_gpu(){
   }
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
-  cudaStreamCreate(&stream);
+  cudaEventCreate(&copyStart);
+  cudaEventCreate(&copyStop);
+  cudaStreamCreate(&kernelStream);
+  cudaStreamCreate(&copyStream);
 
   char *chartemp;
   chartemp = getenv("BLOCKSIZE");
@@ -284,43 +288,59 @@ void infer_gpu(int l){
   dim3 block(blocksize);
   dim3 grid(numblocks,(mybatch+MINIBATCH-1)/MINIBATCH);
 
-  cudaMemset(active_d,0,sizeof(int)*mybatch);
+  // zero activations before kernel?
+  if (l > 0) {
+    cudaMemsetAsync(active_d,0,sizeof(int)*mybatch, kernelStream);
+  }
+  // launch kernel
+#ifdef TIME
+  cudaEventRecord(start, kernelStream);
+#endif
+  if (l > 0) {
+    dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH, kernelStream>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,neuron,categories_d,active_d);
+  }
+#ifdef TIME
+  cudaEventRecord(stop, kernelStream);
+#endif
 
-  double streamtime = MPI_Wtime();
+  // set up copies for next layer
+
+  cudaEventRecord(copyStart);
   #ifdef OUTOFCORE
   #ifdef OVERLAP
-  cudaStreamSynchronize(stream);
   mapbuff_d = mapstream_d+(l%2)*mapsizemax;
   indbuff_d = indstream_d+(l%2)*weightsizemax;
   valbuff_d = valstream_d+(l%2)*weightsizemax;
   if(l+1 < layer){
-    cudaMemcpyAsync(mapstream_d+((l+1)%2)*mapsizemax,map[l+1],sizeof(MAPPREC)*mapdispl[l+1][buffdispl[l+1][numblocks]],cudaMemcpyHostToDevice,stream);
-    cudaMemcpyAsync(indstream_d+((l+1)%2)*weightsizemax,warpindex[l+1],sizeof(INDPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,stream);
-    cudaMemcpyAsync(valstream_d+((l+1)%2)*weightsizemax,warpvalue[l+1],sizeof(VALPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,stream);
+    cudaMemcpyAsync(mapstream_d+((l+1)%2)*mapsizemax,map[l+1],sizeof(MAPPREC)*mapdispl[l+1][buffdispl[l+1][numblocks]],cudaMemcpyHostToDevice,copyStream);
+    cudaMemcpyAsync(indstream_d+((l+1)%2)*weightsizemax,warpindex[l+1],sizeof(INDPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,copyStream);
+    cudaMemcpyAsync(valstream_d+((l+1)%2)*weightsizemax,warpvalue[l+1],sizeof(VALPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,copyStream);
   }
-  #else
+  #else // OVERLAP
   int weightsize = warpdispl[l][buffdispl[l][numblocks]*numwarp]*WARPSIZE;
   cudaMemcpy(indbuff_d,warpindex[l],sizeof(INDPREC)*weightsize,cudaMemcpyHostToDevice);
   cudaMemcpy(valbuff_d,warpvalue[l],sizeof(VALPREC)*weightsize,cudaMemcpyHostToDevice);
   int mapsize = mapdispl[l][buffdispl[l][numblocks]];
   cudaMemcpy(mapbuff_d,map[l],sizeof(MAPPREC)*mapsize,cudaMemcpyHostToDevice);
-  #endif
-  #else
+  #endif // OVERLAP
+  #else // OUTOFCORE
   mapbuff_d = map_d[l];
   indbuff_d = warpindex_d[l];
   valbuff_d = warpvalue_d[l];
-  #endif
-  timestream += MPI_Wtime()-streamtime;
+  #endif // OUTOFCORE
+  cudaEventRecord(copyStop);
 
+  // after kernel, copy back to CPU for bookkeeping
+  cudaMemcpyAsync(active,active_d,sizeof(int)*mybatch,cudaMemcpyDeviceToHost, kernelStream);
+  cudaStreamSynchronize(kernelStream);
 
-  cudaEventRecord(start);
-  dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,neuron,categories_d,active_d);
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
+  // we can be sure the kernel has finished executing here, so we can compute the time
+#ifdef TIME
   cudaEventElapsedTime(&elapsedTime,start,stop);
+#else
+  elapsedTime = 0;
+#endif
   timekernel += elapsedTime/1.0e3;
-
-  cudaMemcpy(active,active_d,sizeof(int)*mybatch,cudaMemcpyDeviceToHost);
 
   int feature = 0;
   for(int k = 0; k < mybatch; k++)
@@ -331,11 +351,17 @@ void infer_gpu(int l){
     }
   mybatch = feature;
 
-  cudaMemcpy(categories_d,categories,sizeof(int)*feature,cudaMemcpyHostToDevice);
-
+  // copy results back to GPU
+  cudaMemcpyAsync(categories_d,categories,sizeof(int)*feature,cudaMemcpyHostToDevice, kernelStream);
   FEATPREC *tempfeat_d = currfeat_d;
   currfeat_d = nextfeat_d;
   nextfeat_d = tempfeat_d;
+
+  // wait for copies to finish
+  cudaStreamSynchronize(copyStream);
+
+  cudaEventElapsedTime(&elapsedTime,copyStart,copyStop);
+  timestream += elapsedTime/1.0e3;
 
   /*int allfeature = 0;
   MPI_Allreduce(&feature,&allfeature,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
