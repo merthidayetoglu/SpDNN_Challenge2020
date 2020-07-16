@@ -16,11 +16,11 @@ OBJECTS = main.o kernels.o
 
 all:	$(TARGETS)
 
-%.o: %.cpp
-	${CXX} ${CXXFLAGS} ${OPTFLAGS} $^ -c -o $@
+%.o: %.cpp vars.h
+	${CXX} ${CXXFLAGS} ${OPTFLAGS} $< -c -o $@
 
-%.o : %.cu
-	${NVCC} ${NVCCFLAGS} $^ -c -o $@
+%.o : %.cu vars.h
+	${NVCC} ${NVCCFLAGS} $< -c -o $@
 
 inference: $(OBJECTS)
 	$(NVCC) -o $@ $(OBJECTS) $(LD_FLAGS)
