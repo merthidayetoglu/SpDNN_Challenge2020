@@ -316,7 +316,7 @@ void infer_gpu(int l){
 #endif
 
   // set up copies for next layer
-  cudaEventRecord(copyStart);
+  cudaEventRecord(copyStart, copyStream);
   #ifdef OUTOFCORE
   #ifdef OVERLAP
   if(l+1 < layer){
@@ -336,7 +336,7 @@ void infer_gpu(int l){
   indbuff_d = warpindex_d[l];
   valbuff_d = warpvalue_d[l];
   #endif // OUTOFCORE
-  cudaEventRecord(copyStop);
+  cudaEventRecord(copyStop, copyStream);
 
   // after kernel, copy back to CPU for bookkeeping
   // do this even when the kernel doesn't run, because setup puts activations on the GPU
