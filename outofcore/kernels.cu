@@ -284,19 +284,32 @@ void setup_gpu(){
   }
 }
 
+
+/* 
+Simultaneously launch the kernel and copy weights for the next layer.
+
+Two streams: kernelStream and copyStream.
+kernelStream contains the kernel, as well as the associated memset, and bookkeeping operations
+copyStream just has the copy operations for the next layer
+we expect to be called layers+1 times, since the first call will have the copy, but not launch the kernel since the data is not ready
+the first layer is l == -1
+
+use copyStart / copyStop events to time the stream, and start/stop events to time the kernel
+
+*/
 void infer_gpu(int l){
   dim3 block(blocksize);
   dim3 grid(numblocks,(mybatch+MINIBATCH-1)/MINIBATCH);
 
   // zero activations before kernel?
-  if (l > 0) {
+  if (l >= 0) {
     cudaMemsetAsync(active_d,0,sizeof(int)*mybatch, kernelStream);
   }
   // launch kernel
 #ifdef TIME
   cudaEventRecord(start, kernelStream);
 #endif
-  if (l > 0) {
+  if (l >= 0) {
     dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH, kernelStream>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,neuron,categories_d,active_d);
   }
 #ifdef TIME
@@ -304,7 +317,6 @@ void infer_gpu(int l){
 #endif
 
   // set up copies for next layer
-
   cudaEventRecord(copyStart);
   #ifdef OUTOFCORE
   #ifdef OVERLAP
@@ -331,7 +343,9 @@ void infer_gpu(int l){
   cudaEventRecord(copyStop);
 
   // after kernel, copy back to CPU for bookkeeping
-  cudaMemcpyAsync(active,active_d,sizeof(int)*mybatch,cudaMemcpyDeviceToHost, kernelStream);
+  if (l >= 0) {
+    cudaMemcpyAsync(active,active_d,sizeof(int)*mybatch,cudaMemcpyDeviceToHost, kernelStream);
+  }
   cudaStreamSynchronize(kernelStream);
 
   // we can be sure the kernel has finished executing here, so we can compute the time
@@ -343,16 +357,20 @@ void infer_gpu(int l){
   timekernel += elapsedTime/1.0e3;
 
   int feature = 0;
-  for(int k = 0; k < mybatch; k++)
-    if(active[k]){
-      globalcategories[feature] = globalcategories[k];
-      categories[feature] = k;
-      feature++;
-    }
-  mybatch = feature;
+  if (l >= 0) {
+    for(int k = 0; k < mybatch; k++)
+      if(active[k]){
+        globalcategories[feature] = globalcategories[k];
+        categories[feature] = k;
+        feature++;
+      }
+    mybatch = feature;
+  }
 
   // copy results back to GPU
-  cudaMemcpyAsync(categories_d,categories,sizeof(int)*feature,cudaMemcpyHostToDevice, kernelStream);
+  if (l >= 0) {
+    cudaMemcpyAsync(categories_d,categories,sizeof(int)*feature,cudaMemcpyHostToDevice, kernelStream);
+  }
   FEATPREC *tempfeat_d = currfeat_d;
   currfeat_d = nextfeat_d;
   nextfeat_d = tempfeat_d;
