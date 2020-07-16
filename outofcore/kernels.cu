@@ -301,42 +301,64 @@ void infer_gpu(int l){
 
   // zero activations before kernel?
   cudaMemsetAsync(active_d,0,sizeof(int)*mybatch, kernelStream);
-  // launch kernel
-#ifdef TIME
-  cudaEventRecord(start, kernelStream);
-#endif
+
+
+
+/* if OUTOFCORE and OVERLAP, point at the right part of the double-buffer to get the weights from the previous iteration
+  if OUTOFCORE and !OVERLAP, copy arguments into the kernel
+  otherwise, just get the right layer pointers
+*/
+#ifdef OUTOFCORE
 #ifdef OVERLAP
   mapbuff_d = mapstream_d+(l%2)*mapsizemax;
   indbuff_d = indstream_d+(l%2)*weightsizemax;
   valbuff_d = valstream_d+(l%2)*weightsizemax;
+#else // OVERLAP
+#ifdef TIME
+  cudaEventRecord(copyStart, copyStream);
+#endif // OVERLAP
+  int weightsize = warpdispl[l][buffdispl[l][numblocks]*numwarp]*WARPSIZE;
+  cudaMemcpy(indbuff_d,warpindex[l],sizeof(INDPREC)*weightsize,cudaMemcpyHostToDevice);
+  cudaMemcpy(valbuff_d,warpvalue[l],sizeof(VALPREC)*weightsize,cudaMemcpyHostToDevice);
+  int mapsize = mapdispl[l][buffdispl[l][numblocks]];
+  cudaMemcpy(mapbuff_d,map[l],sizeof(MAPPREC)*mapsize,cudaMemcpyHostToDevice);
+#ifdef TIME
+  cudaEventRecord(copyStop, copyStream);
+#endif
+#endif // OUTOFCORE
+#else
+  mapbuff_d = map_d[l];
+  indbuff_d = warpindex_d[l];
+  valbuff_d = warpvalue_d[l];
+#endif
+
+// launch and time the kernel
+#ifdef TIME
+  cudaEventRecord(start, kernelStream);
 #endif
     dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH, kernelStream>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,neuron,categories_d,active_d);
 #ifdef TIME
   cudaEventRecord(stop, kernelStream);
 #endif
 
-  // set up copies for next layer
+
+/* if OUTOFCORE and OVERLAP, set up arguments for next layer
+*/
+#ifdef OUTOFCORE
+#ifdef OVERLAP
+#ifdef TIME
   cudaEventRecord(copyStart, copyStream);
-  #ifdef OUTOFCORE
-  #ifdef OVERLAP
+#endif
   if(l+1 < layer){
     cudaMemcpyAsync(mapstream_d+((l+1)%2)*mapsizemax,map[l+1],sizeof(MAPPREC)*mapdispl[l+1][buffdispl[l+1][numblocks]],cudaMemcpyHostToDevice,copyStream);
     cudaMemcpyAsync(indstream_d+((l+1)%2)*weightsizemax,warpindex[l+1],sizeof(INDPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,copyStream);
     cudaMemcpyAsync(valstream_d+((l+1)%2)*weightsizemax,warpvalue[l+1],sizeof(VALPREC)*warpdispl[l+1][buffdispl[l+1][numblocks]*numwarp]*WARPSIZE,cudaMemcpyHostToDevice,copyStream);
   }
-  #else // OVERLAP
-  int weightsize = warpdispl[l][buffdispl[l][numblocks]*numwarp]*WARPSIZE;
-  cudaMemcpy(indbuff_d,warpindex[l],sizeof(INDPREC)*weightsize,cudaMemcpyHostToDevice);
-  cudaMemcpy(valbuff_d,warpvalue[l],sizeof(VALPREC)*weightsize,cudaMemcpyHostToDevice);
-  int mapsize = mapdispl[l][buffdispl[l][numblocks]];
-  cudaMemcpy(mapbuff_d,map[l],sizeof(MAPPREC)*mapsize,cudaMemcpyHostToDevice);
-  #endif // OVERLAP
-  #else // OUTOFCORE
-  mapbuff_d = map_d[l];
-  indbuff_d = warpindex_d[l];
-  valbuff_d = warpvalue_d[l];
-  #endif // OUTOFCORE
+#ifdef TIME
   cudaEventRecord(copyStop, copyStream);
+#endif
+#endif // OVERLAP
+#endif // OUTOFCORE
 
   // after kernel, copy back to CPU for bookkeeping
   // do this even when the kernel doesn't run, because setup puts activations on the GPU
