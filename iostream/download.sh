@@ -40,7 +40,7 @@ gzip -d sparse-images-16384.tsv.gz
 gzip -d sparse-images-65536.tsv.gz
 
 echo "Converting Sparse Images to Binary" 
-g++ ../convert_sparses.cpp -o convertimages
+g++ ../convert_sparsesimages.cpp -o convertimages
 ./convertimages 1024
 ./convertimages 4096
 ./convertimages 16384
