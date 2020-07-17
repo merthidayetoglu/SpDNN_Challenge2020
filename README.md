@@ -21,7 +21,6 @@ mkdir dataset
 cd dataset
 bash $PROJREPO/utils/download.sh
 ```
-
 # Dependencies
 
 1. Latest version of CUDA. 
