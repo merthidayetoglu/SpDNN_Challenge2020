@@ -43,12 +43,6 @@ After clearing dependencies, run the following.
 
 ```
 cd iostream
-make -j 
-```
-
-Change DATASET environment variable to reflect your downloaded path in `run_local.sh`
-
-```
 bash run_local.sh > output.log 
 ```
 
