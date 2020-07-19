@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <omp.h>
-#include "mma.h"
+//#include "mma.h"
 
 using namespace std;
 
