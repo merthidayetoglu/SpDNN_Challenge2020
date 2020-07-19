@@ -10,13 +10,17 @@
 #SBATCH --mem-per-cpu=1200
 #SBATCH --gres=gpu:v100:4
 
+
+
 echo "Cleaning binaries and compiling again"
+mv Makefile.local Makefile
 make clean;make -j 
 
 echo "Starting Benchmark"
 date
 
-export DATASET=/home/vsm2/SpDNN_Challenge2020/iostream/dataset
+#export DATASET=/home/vsm2/SpDNN_Challenge2020/iostream/dataset
+export DATASET=$PROJREPO/dataset
 #export DATASET=/home/vsm2/dataset
 
 #1024 4096 16384 65536

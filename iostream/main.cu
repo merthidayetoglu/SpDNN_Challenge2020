@@ -37,9 +37,9 @@ int extbatch;
 
 int main(int argc, char** argv) {
 
-  timetot = MPI_Wtime();
 
   MPI_Init(&argc,&argv);
+  timetot = MPI_Wtime();
   MPI_Comm_rank(MPI_COMM_WORLD,&myid);
   MPI_Comm_size(MPI_COMM_WORLD,&numproc);
 

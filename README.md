@@ -9,14 +9,18 @@ After download is complete, untar all the files present inside the dataset.
 
 ## Option 2
 Automatic download and compilation (requires gzip and tar support).
-Space Required: ~300GB. Post processing ~90GB. 
+Space Required: ~200GB. Post processing ~90GB. 
+
+We assume you have set PROJREPO environment variable to the repo home. 
 
 ```
+git clone https://github.com/merthidayetoglu/SpDNN_Challenge2020.git
+cd SpDNN_Challenge2020
+export PROJREPO=$PWD
 mkdir dataset
 cd dataset
-bash ../download.sh
+bash $PROJREPO/utils/download.sh
 ```
-
 # Dependencies
 
 1. Latest version of CUDA. 
@@ -38,12 +42,6 @@ After clearing dependencies, run the following.
 
 ```
 cd iostream
-make -j 
-```
-
-Change DATASET environment variable to reflect your downloaded path in `run_local.sh`
-
-```
 bash run_local.sh > output.log 
 ```
 
