@@ -116,10 +116,8 @@ int main(int argc, char** argv) {
   if(myid==0)printf("START INFERENCE\n");
   MPI_Barrier(MPI_COMM_WORLD);
   timeinfer = MPI_Wtime();
-  // -1 copies layer 0 onto the GPU
-  for(int l = 0; l < layer; l++){
+  for(int l = 0; l < layer; l++)
     infer_gpu(l);
-  }
   MPI_Barrier(MPI_COMM_WORLD);
   timeinfer = MPI_Wtime()-timeinfer;
   if(myid==0)printf("END INFERENCE\n");
@@ -283,4 +281,3 @@ void readinput(){
     delete[] tempfeat;
   }
 }
-
