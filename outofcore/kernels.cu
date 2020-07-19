@@ -70,6 +70,7 @@ int numblocks;
 int numwarp;
 int buffsize;
 
+
 cudaEvent_t copystart, copystop;
 cudaEvent_t kernelstart, kernelstop;
 cudaStream_t copystream;
@@ -285,8 +286,23 @@ void setup_gpu(){
   }
 }
 
+
+/* 
+Simultaneously launch the kernel and copy weights for the next layer.
+
+Two streams: kernelStream and copyStream.
+kernelStream contains the kernel, as well as the associated memset, and bookkeeping operations
+copyStream just has the copy operations for the next layer
+
+use copyStart / copyStop events to time the stream, and start/stop events to time the kernel
+
+*/
 void infer_gpu(int l){
 
+/* if OUTOFCORE and OVERLAP, point at the right part of the double-buffer to get the weights from the previous iteration
+  if OUTOFCORE and !OVERLAP, copy arguments into the kernel
+  otherwise, just get the right layer pointers
+*/
   #ifdef OUTOFCORE
   #ifdef OVERLAP
   mapbuff_d = mapstream_d+(l%2)*mapsizemax;
@@ -310,7 +326,7 @@ void infer_gpu(int l){
 
   dim3 block(blocksize);
   dim3 grid(numblocks,(mybatch+MINIBATCH-1)/MINIBATCH);
-
+  // initialize active features in the batch
   cudaMemsetAsync(active_d,0,sizeof(int)*mybatch,kernelstream);
 
   cudaEventRecord(kernelstart,kernelstream);
@@ -343,6 +359,7 @@ void infer_gpu(int l){
     }
   mybatch = feature;
 
+
   cudaMemcpyAsync(categories_d,categories,sizeof(int)*feature,cudaMemcpyHostToDevice,kernelstream);
 
   cudaEventElapsedTime(&elapsedTime,kernelstart,kernelstop);
@@ -355,6 +372,7 @@ void infer_gpu(int l){
   //int allfeature = 0;
   //MPI_Allreduce(&feature,&allfeature,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
   //if(myid==0)printf("layer %d features %d\n",l,allfeature);
+
 };
 void preproc(){
   buffdispl = new int*[layer];
