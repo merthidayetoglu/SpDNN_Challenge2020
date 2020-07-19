@@ -41,7 +41,7 @@ sudo apt-get install -y mpich
 After clearing dependencies, run the following. 
 
 ```
-cd iostream
+cd outofcore 
 bash run_local.sh > output.log 
 ```
 
