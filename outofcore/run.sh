@@ -21,7 +21,7 @@ export BIAS=-0.4
 export INPUT=98858913
 
 #120 480 1920
-export LAYER=480
+export LAYER=120
 export BATCH=60000
 
 export BLOCKSIZE=256

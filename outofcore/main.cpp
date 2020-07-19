@@ -23,7 +23,7 @@ double timeio;
 double timetot;
 double timeinfer;
 double timekernel = 0.0;
-double timestream = 0.0;
+double timecopy = 0.0;
 
 int myid;
 int numproc;
@@ -114,8 +114,6 @@ int main(int argc, char** argv) {
 
   if(myid==0)printf("\n");
   if(myid==0)printf("START INFERENCE\n");
-  timekernel = 0;
-  timestream = 0;
   MPI_Barrier(MPI_COMM_WORLD);
   timeinfer = MPI_Wtime();
   // -1 copies layer 0 onto the GPU
@@ -143,6 +141,7 @@ int main(int argc, char** argv) {
   MPI_Allgatherv(globalcategories,mybatch,MPI_INT,allcategories,batches,batchesdispl,MPI_INT,MPI_COMM_WORLD);
   if(myid==0){
     sprintf(chartemp,"%s/neuron%d-l%d-categories.tsv",dataset,neuron,layer);
+    //sprintf(chartemp,"%s/neuron16384-l120-categories.tsv",dataset);
     FILE *catf = fopen(chartemp,"r");
     bool pass = true;
     for(int k = 0; k < batchesdispl[numproc]; k++){
@@ -165,11 +164,11 @@ int main(int argc, char** argv) {
     printf("--------------------------------------\n");
   }
   MPI_Allreduce(MPI_IN_PLACE,&timekernel,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE,&timestream,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE,&timecopy,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
   if(myid==0){
     printf("KERNEL TIME: %e s\n",timekernel/numproc);
-    printf("STREAM TIME: %e s\n",timestream/numproc);
-    printf("OTHERS TIME: %e s\n",(timeinfer-timekernel-timestream)/numproc);
+    printf("  COPY TIME: %e s\n",timecopy/numproc);
+    printf(" OTHER TIME: %e s\n",(timeinfer-timekernel-timecopy)/numproc);
     printf(" TOTAL TIME: %e s\n",timeinfer);
   }
   MPI_Barrier(MPI_COMM_WORLD);
