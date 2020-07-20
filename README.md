@@ -24,9 +24,9 @@ bash $PROJREPO/utils/download.sh
 # Dependencies
 
 1. Latest version of CUDA. 
-2. mpicxx compiler 
+2. g++ compiler 
 
-## Installing mpicxx compiler
+## Installing mpicxx compiler - Ignore if single GPU.
 ```
 # For CentOS/RedHat system
 sudo dnf install mpich mpich-devel
@@ -41,7 +41,7 @@ sudo apt-get install -y mpich
 After clearing dependencies, run the following. 
 
 ```
-cd outofcore 
+cd singlegpu 
 bash run_local.sh > output.log 
 ```
 
