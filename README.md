@@ -42,7 +42,7 @@ After clearing dependencies, run the following.
 
 ```
 cd singlegpu 
-bash run_local.sh > output.log 
+bash run_ampere.sh > output.log 
 ```
 
 Do let us know if you get any errors in output.log. Ideally it should work without any issues. 
