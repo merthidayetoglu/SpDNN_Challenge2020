@@ -20,11 +20,11 @@ date
 export DATASET=/gpfs/alpine/csc362/scratch/cpearson/spDNN_data/
 export PROFILE_PREFIX=/gpfs/alpine/csc362/scratch/cpearson
 #1024 4096 16384 65536
-export NEURON=1024
+export NEURON=16384
 #-0.3 -0.35 -0.4 -0.45
-export BIAS=-0.3
+export BIAS=-0.4
 #6374505 25019051 98858913 392191985
-export INPUT=6374505
+export INPUT=98858913
 
 export BATCH=60000
 
@@ -34,8 +34,8 @@ export BUFFER=24
 for l in 120 #480 1920
 do
   export LAYER=$l
-  #jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
-  jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info cuda-memcheck ./inference
+  jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  #jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info cuda-memcheck ./inference
 done
 
 date
