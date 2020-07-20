@@ -4,7 +4,7 @@
 #include <chrono>
 
 using namespace std;
-typedef std::chrono::duration<double, std::milli> Duration;
+typedef std::chrono::duration<double> Duration;
 typedef std::chrono::system_clock sc;
 
 void readweights();
