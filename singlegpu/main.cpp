@@ -239,6 +239,10 @@ void readinput(){
     printf("features: %ld (%f GB)\n",neuron*(long)batch*2,neuron*(long)batch*2*sizeof(FEATPREC)/1.0e9);
     sprintf(chartemp,"%s/sparse-images-%d.bin",dataset,neuron);
     FILE *inputf = fopen(chartemp,"rb");
+    if (!inputf) {
+      fprintf(stderr, "missing %s\n", chartemp);
+      exit(1);
+    }
     int *row = new int[input];
     int *col = new int[input];
     float *val = new float[input];
@@ -261,7 +265,7 @@ void readinput(){
     delete[] val;
   }
 
-  std::memcpy(currfeat, tempfeat, mybatch * sizeof(*currfeat));
+  std::memcpy(currfeat, tempfeat, neuron * batch * sizeof(*currfeat));
   #if 0
   int packetsize = 1000;
   MPI_Request *request;

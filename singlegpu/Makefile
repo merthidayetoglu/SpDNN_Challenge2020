@@ -3,6 +3,9 @@
 NVCC = nvcc
 NVCCFLAGS = -lineinfo -O3 -std=c++11 -gencode arch=compute_70,code=sm_70 -Xptxas="-v" -Xcompiler -fopenmp
 
+CXX = g++
+CXXFLAGS = -O3 -fopenmp -std=c++11
+
 TARGETS = inference
 OBJECTS = main.o kernels.o
 
