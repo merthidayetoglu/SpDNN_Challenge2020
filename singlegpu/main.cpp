@@ -265,7 +265,12 @@ void readinput(){
     delete[] val;
   }
 
-  std::memcpy(currfeat, tempfeat, neuron * batch * sizeof(*currfeat));
+  {
+    size_t numBytes = size_t(neuron) * size_t(mybatch) * sizeof(FEATPREC);
+    fprintf(stderr, "about to memcpy %lu MB\n", numBytes / 1024 / 1024);
+    std::memcpy(currfeat, tempfeat, numBytes);
+    fprintf(stderr, "done memcpy\n");
+  }
   #if 0
   int packetsize = 1000;
   MPI_Request *request;

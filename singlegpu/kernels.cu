@@ -256,13 +256,26 @@ void setup_gpu(){
   #endif
 
   double memfeat = 0.0;
-  cudaMalloc((void**)&currfeat_d,sizeof(FEATPREC)*extbatch*neuron);
-  cudaMalloc((void**)&nextfeat_d,sizeof(FEATPREC)*extbatch*neuron);
-  memfeat += sizeof(FEATPREC)*extbatch*neuron/1.0e9;
-  memfeat += sizeof(FEATPREC)*extbatch*neuron/1.0e9;
-  cudaMemset(currfeat_d,0,sizeof(FEATPREC)*extbatch*neuron);
-  cudaMemset(nextfeat_d,0,sizeof(FEATPREC)*extbatch*neuron);
-  cudaMemcpy(currfeat_d,currfeat,sizeof(FEATPREC)*mybatch*neuron,cudaMemcpyHostToDevice);
+  fprintf(stderr, "extbatch=%d, neuron=%d\n", extbatch, neuron);
+  {
+    const size_t bytes = sizeof(FEATPREC) * size_t(extbatch) * size_t(neuron);
+    fflush(stdout);
+    fprintf(stderr, "cudaMalloc %lu MB\n", bytes/1024/1024);
+    if (cudaSuccess != cudaMalloc((void**)&currfeat_d,bytes)) {
+      fprintf(stderr, "ERROR: need more GPU memory\n");
+      exit(EXIT_FAILURE);
+    }
+    fprintf(stderr, "cudaMalloc %lu MB\n", bytes/1024/1024);
+    if (cudaSuccess != cudaMalloc((void**)&nextfeat_d,bytes)) {
+      fprintf(stderr, "ERROR: need more GPU memory\n");
+      exit(EXIT_FAILURE);
+    }
+    memfeat += bytes/1.0e9;
+    memfeat += bytes/1.0e9;
+    cudaMemset(currfeat_d,0,bytes);
+    cudaMemset(nextfeat_d,0,bytes);
+    cudaMemcpy(currfeat_d,currfeat,bytes,cudaMemcpyHostToDevice);
+  }
 
   double memothers[numproc];
   double memweights[numproc];
