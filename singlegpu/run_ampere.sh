@@ -73,7 +73,9 @@ do
 		echo $BIAS
 		echo $INPUT
 		echo $DATASET
-		mpirun -np 1 ./inference
+		./inference
+
+		echo "****************************************************"
 
 	done 
 

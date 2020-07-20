@@ -74,6 +74,8 @@ do
 		echo $INPUT
 		echo $DATASET
 		./inference
+		#cuda-memcheck ./inference
+		echo "****************************************************"
 
 	done 
 

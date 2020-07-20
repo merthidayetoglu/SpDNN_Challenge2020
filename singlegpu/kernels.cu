@@ -89,8 +89,8 @@ __global__ void __launch_bounds__(256,4) dummy_kernel(FEATPREC *nextfeat, FEATPR
     int mapnz = mapdispl[buff+1]-mapdispl[buff];
     for(int n = threadIdx.x; n < mapnz; n += blockDim.x){
       int ind = map[mapdispl[buff]+n];
-      for(int f = 0; f < MINIBATCH; f++)
-        shared[f*buffsize+n] = currfeat[categories[blockIdx.y*MINIBATCH+f]*neuron+ind];
+      for(unsigned int f = 0; f < MINIBATCH; f++)
+        shared[f*buffsize+n] = currfeat[categories[blockIdx.y*MINIBATCH+f]* (unsigned int) neuron+ind];
     }
     __syncthreads();
     int warp = (buff*blockDim.x+threadIdx.x)/WARPSIZE;
