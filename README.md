@@ -38,7 +38,7 @@ sudo apt-get install -y mpich
 `export` the installed mpich binary path and lib paths to `$PATH` and `$LD_LIBRARY_PATH` variables. 
 
 # Run 
-After clearing dependencies, run the following. 
+After clearing dependencies and setting PROJREPO environment variable, run the following. 
 
 ```
 cd singlegpu 
