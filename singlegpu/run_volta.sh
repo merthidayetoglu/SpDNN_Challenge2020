@@ -11,6 +11,10 @@
 #SBATCH --gres=gpu:v100:4
 
 
+if [[ -z "${PROJREPO}" ]]; then 
+       echo "ERROR: Set PROJREPO enviornment variable"	
+       exit 0
+fi
 
 echo "Cleaning binaries and compiling again"
 cp -f Makefile.volta Makefile
