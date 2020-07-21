@@ -153,6 +153,7 @@ int main(int argc, char** argv) {
   }
 
   if(myid==0){
+    char chartemp[500];
     sprintf(chartemp,"%s/neuron%d-l%d-categories.tsv",dataset,neuron,layer);
     //sprintf(chartemp,"%s/neuron16384-l120-categories.tsv",dataset);
     FILE *catf = fopen(chartemp,"r");
@@ -206,7 +207,7 @@ void readweights(){
     csrvalue[l] = new VALPREC[csrdispl[l][neuron]];
   }
   if(myid==0)printf("weights: %ld (%f GB)\n",totnz,totnz*(sizeof(INDPREC)+sizeof(VALPREC))/1.0e9);
-  char chartemp[80];
+  char chartemp[500];
   sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron);
   FILE *weightf = fopen(chartemp,"rb");
   for(int l = 0; l < layer; l++){
@@ -233,7 +234,7 @@ void readweights(){
 };
 
 void readinput(){
-  char chartemp[80];
+  char chartemp[500];
   FEATPREC *tempfeat;
   if(myid==0){
     printf("features: %ld (%f GB)\n",neuron*(long)batch*2,neuron*(long)batch*2*sizeof(FEATPREC)/1.0e9);
