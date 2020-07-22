@@ -217,6 +217,8 @@ void readweights(){
   if(myid==0)printf("weights: %ld (%f GB)\n",totnz,totnz*(sizeof(INDPREC)+sizeof(VALPREC))/1.0e9);
   char chartemp[500];
   assert(sizeof(chartemp) < sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron));
+  printf("open %s", chartemp);
+  fflush(0);
   FILE *weightf = fopen(chartemp,"rb");
   if (!weightf) {
     fprintf(stderr, "failed to open %s", chartemp);
