@@ -2,6 +2,7 @@
 
 
 #include <cstring>
+#include <cassert>
 
 char *dataset;
 
@@ -112,9 +113,13 @@ int main(int argc, char** argv) {
   auto startio = sc::now();
   if(myid==0)printf("\n");
   if(myid==0)printf("READING WEIGHTS\n");
+  fflush(0);
   readweights();
+  fflush(0);
   if(myid==0)printf("READING INPUT\n");
+  fflush(0);
   readinput();
+  fflush(0);
   // MPI_Barrier(MPI_COMM_WORLD);
   // timeio = MPI_Wtime()-timeio;
   Duration timeio = sc::now() - startio;
@@ -160,7 +165,10 @@ int main(int argc, char** argv) {
     bool pass = true;
     for(int k = 0; k < batchesdispl[numproc]; k++){
       int cat;
-      fscanf(catf,"%d\n",&cat);
+      if (1 != fscanf(catf,"%d\n",&cat)) {
+        fprintf(stderr, "unexpected characters read\n");
+        exit(EXIT_FAILURE);
+      }
       //printf("cat %d %d\n",cat-1,allcategories[k]);
       if(cat-1!=allcategories[k])
         pass = false;
@@ -208,15 +216,21 @@ void readweights(){
   }
   if(myid==0)printf("weights: %ld (%f GB)\n",totnz,totnz*(sizeof(INDPREC)+sizeof(VALPREC))/1.0e9);
   char chartemp[500];
-  sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron);
+  assert(sizeof(chartemp) < sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron));
+  printf("open %s", chartemp);
+  fflush(0);
   FILE *weightf = fopen(chartemp,"rb");
+  if (!weightf) {
+    fprintf(stderr, "failed to open %s", chartemp);
+    exit(EXIT_FAILURE);
+  }
   for(int l = 0; l < layer; l++){
     int *row = new int[csrdispl[l][neuron]];
     int *col = new int[csrdispl[l][neuron]];
     float *val = new float[csrdispl[l][neuron]];
-    fread(row,sizeof(int),csrdispl[l][neuron],weightf);
-    fread(col,sizeof(int),csrdispl[l][neuron],weightf);
-    fread(val,sizeof(int),csrdispl[l][neuron],weightf);
+    assert(csrdispl[l][neuron] == fread(row,sizeof(int),csrdispl[l][neuron],weightf));
+    assert(csrdispl[l][neuron] == fread(col,sizeof(int),csrdispl[l][neuron],weightf));
+    assert(csrdispl[l][neuron] == fread(val,sizeof(int),csrdispl[l][neuron],weightf));
     int rownz[neuron];
     #pragma omp parallel for
     for(int n = 0; n < neuron; n++)
@@ -247,9 +261,9 @@ void readinput(){
     int *row = new int[input];
     int *col = new int[input];
     float *val = new float[input];
-    fread(row,sizeof(int),input,inputf);
-    fread(col,sizeof(int),input,inputf);
-    fread(val,sizeof(float),input,inputf);
+    assert(input == fread(row,sizeof(int),input,inputf));
+    assert(input == fread(col,sizeof(int),input,inputf));
+    assert(input == fread(val,sizeof(float),input,inputf));
     if(myid==0){
       tempfeat = new FEATPREC[neuron*(long)batch];
       #pragma omp parallel for
