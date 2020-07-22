@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
   if(myid==0){
     printf("KERNEL TIME: %e s\n",timekernel/numproc);
     printf("  COPY TIME: %e s\n",timecopy/numproc);
-    printf(" OTHER TIME: %e s\n",(timeinfer-timekernel-timecopy)/numproc);
+    printf(" OTHER TIME: %e s\n",timeinfer-(timekernel+timecopy)/numproc);
     printf(" TOTAL TIME: %e s\n",timeinfer);
   }
   MPI_Barrier(MPI_COMM_WORLD);
