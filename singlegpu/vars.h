@@ -1,10 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <mpi.h>
+#include <cstdio>
+#include <cstdlib>
 #include <omp.h>
-//#include "mma.h"
+#include <chrono>
 
 using namespace std;
+typedef std::chrono::duration<double> Duration;
+typedef std::chrono::system_clock sc;
 
 void readweights();
 void preproc();

@@ -24,9 +24,9 @@ bash $PROJREPO/utils/download.sh
 # Dependencies
 
 1. Latest version of CUDA. 
-2. mpicxx compiler 
+2. g++ compiler 
 
-## Installing mpicxx compiler
+## Installing mpicxx compiler - Ignore if single GPU.
 ```
 # For CentOS/RedHat system
 sudo dnf install mpich mpich-devel
@@ -38,11 +38,11 @@ sudo apt-get install -y mpich
 `export` the installed mpich binary path and lib paths to `$PATH` and `$LD_LIBRARY_PATH` variables. 
 
 # Run 
-After clearing dependencies, run the following. 
+After clearing dependencies and setting PROJREPO environment variable, run the following. 
 
 ```
-cd iostream
-bash run_local.sh > output.log 
+cd singlegpu 
+bash run_ampere.sh > output.log 
 ```
 
 Do let us know if you get any errors in output.log. Ideally it should work without any issues. 

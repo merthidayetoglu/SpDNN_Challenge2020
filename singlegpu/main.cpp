@@ -1,5 +1,8 @@
 #include "vars.h"
 
+
+#include <cstring>
+
 char *dataset;
 
 int neuron;
@@ -19,11 +22,11 @@ int *active;
 int *categories;
 int *globalcategories;
 
-double timeio;
-double timetot;
-double timeinfer;
-double timekernel = 0.0;
-double timecopy = 0.0;
+Duration timeio;
+Duration timetot;
+Duration timeinfer;
+Duration timekernel;
+Duration timecopy;
 
 int myid;
 int numproc;
@@ -34,13 +37,17 @@ int *batchdispl;
 int mybatch;
 int extbatch;
 
+
+
 int main(int argc, char** argv) {
 
+  auto startTot = sc::now();
 
-  MPI_Init(&argc,&argv);
-  timetot = MPI_Wtime();
-  MPI_Comm_rank(MPI_COMM_WORLD,&myid);
-  MPI_Comm_size(MPI_COMM_WORLD,&numproc);
+  // timetot = MPI_Wtime();
+  // MPI_Comm_rank(MPI_COMM_WORLD,&myid);
+  myid = 0;
+  // MPI_Comm_size(MPI_COMM_WORLD,&numproc);
+  numproc = 1;
 
   if(myid==0)printf("\n");
   if(myid==0)printf("NUMBER OF PROCESS: %d\n",numproc);
@@ -100,32 +107,36 @@ int main(int argc, char** argv) {
   currfeat = new FEATPREC[neuron*(long)mybatch];
   nextfeat = new FEATPREC[neuron*(long)mybatch];
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  timeio = MPI_Wtime();
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // timeio = MPI_Wtime();
+  auto startio = sc::now();
   if(myid==0)printf("\n");
   if(myid==0)printf("READING WEIGHTS\n");
   readweights();
   if(myid==0)printf("READING INPUT\n");
   readinput();
-  MPI_Barrier(MPI_COMM_WORLD);
-  timeio = MPI_Wtime()-timeio;
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // timeio = MPI_Wtime()-timeio;
+  Duration timeio = sc::now() - startio;
 
   setup_gpu();
 
   if(myid==0)printf("\n");
   if(myid==0)printf("START INFERENCE\n");
-  MPI_Barrier(MPI_COMM_WORLD);
-  timeinfer = MPI_Wtime();
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // timeinfer = MPI_Wtime();
+  auto startInfer = sc::now();
   for(int l = 0; l < layer; l++)
     infer_gpu(l);
-  MPI_Barrier(MPI_COMM_WORLD);
-  timeinfer = MPI_Wtime()-timeinfer;
+  // MPI_Barrier(MPI_COMM_WORLD);
+  Duration timeinfer = sc::now() - startInfer;
   if(myid==0)printf("END INFERENCE\n");
 
   if(myid==0)printf("\n");
   if(myid==0)printf("CHECK CATEGORIES\n");
   int batches[numproc];
-  MPI_Allgather(&mybatch,1,MPI_INT,batches,1,MPI_INT,MPI_COMM_WORLD);
+  // MPI_Allgather(&mybatch,1,MPI_INT,batches,1,MPI_INT,MPI_COMM_WORLD);
+  batches[myid] = mybatch;
   if(myid==0)
     for(int p = 0; p < numproc; p++)
       printf("proc %d categories: %d\n",p,batches[p]);
@@ -136,8 +147,13 @@ int main(int argc, char** argv) {
   if(myid==0)
      printf("all categories: %d\n",batchesdispl[numproc]);
   int *allcategories = new int[batchesdispl[numproc]];
-  MPI_Allgatherv(globalcategories,mybatch,MPI_INT,allcategories,batches,batchesdispl,MPI_INT,MPI_COMM_WORLD);
+  // MPI_Allgatherv(globalcategories,mybatch,MPI_INT,allcategories,batches,batchesdispl,MPI_INT,MPI_COMM_WORLD);
+  {
+    std::memcpy(allcategories + batchesdispl[0], globalcategories, mybatch * sizeof(*allcategories));
+  }
+
   if(myid==0){
+    char chartemp[500];
     sprintf(chartemp,"%s/neuron%d-l%d-categories.tsv",dataset,neuron,layer);
     //sprintf(chartemp,"%s/neuron16384-l120-categories.tsv",dataset);
     FILE *catf = fopen(chartemp,"r");
@@ -156,23 +172,24 @@ int main(int argc, char** argv) {
 
   if(myid==0){
     printf("\n");
-    printf("      I/O TIME: %f s\n",timeio);
-    printf("INFERENCE TIME: %f s\n",timeinfer);
-    printf("INFERENCE THRP: %e EDGES/s (%f TFLOPS)\n",totnz/timeinfer*batch,totnz/timeinfer*batch*2/1e12);
+    printf("      I/O TIME: %f s\n",timeio.count());
+    printf("INFERENCE TIME: %f s\n",timeinfer.count());
+    printf("INFERENCE THRP: %e EDGES/s (%f TFLOPS)\n",totnz/timeinfer.count()*batch,totnz/timeinfer.count()*batch*2/1e12);
     printf("--------------------------------------\n");
   }
-  MPI_Allreduce(MPI_IN_PLACE,&timekernel,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE,&timecopy,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  // MPI_Allreduce(MPI_IN_PLACE,&timekernel,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+  // MPI_Allreduce(MPI_IN_PLACE,&timecopy,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
   if(myid==0){
-    printf("KERNEL TIME: %e s\n",timekernel/numproc);
-    printf("  COPY TIME: %e s\n",timecopy/numproc);
-    printf(" OTHER TIME: %e s\n",timeinfer-(timekernel+timecopy)/numproc);
-    printf(" TOTAL TIME: %e s\n",timeinfer);
+    printf("KERNEL TIME: %e s\n",timekernel.count()/numproc);
+    printf("  COPY TIME: %e s\n",timecopy.count()/numproc);
+    printf(" OTHER TIME: %e s\n",(timeinfer-timekernel-timecopy).count()/numproc);
+    printf(" TOTAL TIME: %e s\n",timeinfer.count());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  // MPI_Barrier(MPI_COMM_WORLD);
   if(myid==0)printf("\n");
-  if(myid==0)printf("EXECUTION TIME: %f\n",MPI_Wtime()-timetot);
-  MPI_Finalize();
+  timetot = sc::now() - startTot;
+  if(myid==0)printf("EXECUTION TIME: %f\n",timetot.count());
+  // MPI_Finalize();
 }
 
 void readweights(){
@@ -190,7 +207,7 @@ void readweights(){
     csrvalue[l] = new VALPREC[csrdispl[l][neuron]];
   }
   if(myid==0)printf("weights: %ld (%f GB)\n",totnz,totnz*(sizeof(INDPREC)+sizeof(VALPREC))/1.0e9);
-  char chartemp[80];
+  char chartemp[500];
   sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron);
   FILE *weightf = fopen(chartemp,"rb");
   for(int l = 0; l < layer; l++){
@@ -215,13 +232,18 @@ void readweights(){
   }
   fclose(weightf);
 };
+
 void readinput(){
-  char chartemp[80];
+  char chartemp[500];
   FEATPREC *tempfeat;
   if(myid==0){
     printf("features: %ld (%f GB)\n",neuron*(long)batch*2,neuron*(long)batch*2*sizeof(FEATPREC)/1.0e9);
     sprintf(chartemp,"%s/sparse-images-%d.bin",dataset,neuron);
     FILE *inputf = fopen(chartemp,"rb");
+    if (!inputf) {
+      fprintf(stderr, "missing %s\n", chartemp);
+      exit(1);
+    }
     int *row = new int[input];
     int *col = new int[input];
     float *val = new float[input];
@@ -243,6 +265,14 @@ void readinput(){
     delete[] col;
     delete[] val;
   }
+
+  {
+    size_t numBytes = size_t(neuron) * size_t(mybatch) * sizeof(FEATPREC);
+    fprintf(stderr, "about to memcpy %lu MB\n", numBytes / 1024 / 1024);
+    std::memcpy(currfeat, tempfeat, numBytes);
+    fprintf(stderr, "done memcpy\n");
+  }
+  #if 0
   int packetsize = 1000;
   MPI_Request *request;
   //MPI_Request request;
@@ -271,12 +301,14 @@ void readinput(){
       displ += numbatch[p]*(long)neuron;
     }
   }
+
   {
     int numpacket = (mybatch+packetsize-1)/packetsize;
     MPI_Waitall(numpacket,request,MPI_STATUS_IGNORE);
     delete[] request;
   }
   //MPI_Wait(&request,MPI_STATUS_IGNORE);
+  #endif
   if(myid==0){
     delete[] tempfeat;
   }
