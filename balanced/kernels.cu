@@ -75,10 +75,11 @@ int buffsize;
 int numfeature;
 FEATPREC *sendbuff;
 FEATPREC *recvbuff;
+MPI_Request *catrecvrequests;
+MPI_Request *catsendrequests;
 MPI_Request *featrecvrequests;
 MPI_Request *featsendrequests;
 #endif
-
 
 cudaEvent_t copystart, copystop;
 cudaEvent_t kernelstart, kernelstop;
@@ -293,6 +294,8 @@ void setup_gpu(){
     printf("MAX GPU MEM: %f GB\n",memmax);
   }
   #ifdef BALANCE
+  catrecvrequests = new MPI_Request[numproc];
+  catsendrequests = new MPI_Request[numproc];
   featrecvrequests = new MPI_Request[numproc];
   featsendrequests = new MPI_Request[numproc];
   cudaMallocHost((void**)&recvbuff,sizeof(FEATPREC)*mybatch*neuron);
@@ -377,7 +380,8 @@ void infer_gpu(int l){
   double time = MPI_Wtime();
   int allfeature = 0;
   MPI_Allreduce(&feature,&allfeature,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
-  if(allfeature != numfeature){
+  if(allfeature!=numfeature){
+    if(myid==0)printf("layer %d oldfeature %d newfeature %d load balancing...\n",l,numfeature,allfeature);
     int features[numproc];
     MPI_Allgather(&feature,1,MPI_INT,features,1,MPI_INT,MPI_COMM_WORLD);
     int newfeatures[numproc];
@@ -407,36 +411,47 @@ void infer_gpu(int l){
           commap[m][n] = carry;
         }
       }
-    int irecv = 0;
-    int recvamount = 0;
-    for(int m = 0; m < numproc; m++)
-      if(int amount = commap[m][myid]){
-        MPI_Irecv(recvbuff+recvamount*neuron,sizeof(FEATPREC)*amount*neuron,MPI_BYTE,m,0,MPI_COMM_WORLD,featrecvrequests+irecv);
-        recvamount += amount;
-        irecv++;
-      }
-    int isend = 0;
-    for(int n = 0; n < numproc; n++)
-      if(int amount = commap[myid][n]){
-        for(int m = 0; m < amount; m++){
-          feature--;
-          cudaMemcpyAsync(sendbuff+feature*neuron,nextfeat_d+categories[feature]*neuron,sizeof(FEATPREC)*neuron,cudaMemcpyDeviceToHost,kernelstream);
+    //IF A RECEIVER
+    if(newfeatures[myid] > feature){
+      int irecv = 0;
+      int recvamount = 0;
+      for(int m = 0; m < numproc; m++)
+        if(int amount = commap[m][myid]){
+          MPI_Irecv(globalcategories+feature+recvamount,amount,MPI_INT,m,0,MPI_COMM_WORLD,catrecvrequests+irecv);
+          MPI_Irecv(recvbuff+recvamount*neuron,sizeof(FEATPREC)*amount*neuron,MPI_BYTE,m,0,MPI_COMM_WORLD,featrecvrequests+irecv);
+          recvamount += amount;
+          irecv++;
         }
-        MPI_Issend(sendbuff+feature*neuron,sizeof(FEATPREC)*amount*neuron,MPI_BYTE,n,0,MPI_COMM_WORLD,featsendrequests+isend);
-      }
-    MPI_Waitall(irecv,featrecvrequests,MPI_STATUSES_IGNORE);
-    if(recvamount)
+      MPI_Waitall(irecv,featrecvrequests,MPI_STATUSES_IGNORE);
+      int counter = 0;
       for(int n = 0; n < mybatch; n++)
         if(!active[n]){
-          recvamount--;
-          cudaMemcpyAsync(nextfeat_d+n*neuron,recvbuff+recvamount*neuron,sizeof(FEATPREC)*neuron,cudaMemcpyHostToDevice,kernelstream);
+          cudaMemcpyAsync(nextfeat_d+n*neuron,recvbuff+counter*neuron,sizeof(FEATPREC)*neuron,cudaMemcpyHostToDevice,kernelstream);
           categories[feature] = n;
           feature++;
-          if(!recvamount)
+          counter++;
+          if(counter==recvamount)
             break;
         }
-    MPI_Waitall(isend,featsendrequests,MPI_STATUSES_IGNORE);
-    cudaStreamSynchronize(kernelstream);
+      MPI_Waitall(irecv,catrecvrequests,MPI_STATUS_IGNORE);
+    }
+    //IF A SENDER
+    if(newfeatures[myid] < feature){
+      int isend = 0;
+      for(int n = 0; n < numproc; n++)
+        if(int amount = commap[myid][n]){
+          for(int m = 0; m < amount; m++){
+            feature--;
+            cudaMemcpyAsync(sendbuff+feature*neuron,nextfeat_d+categories[feature]*neuron,sizeof(FEATPREC)*neuron,cudaMemcpyDeviceToHost,kernelstream);
+          }
+          MPI_Issend(globalcategories+feature,amount,MPI_INT,n,0,MPI_COMM_WORLD,catsendrequests+isend);
+          cudaStreamSynchronize(kernelstream);
+          MPI_Issend(sendbuff+feature*neuron,sizeof(FEATPREC)*amount*neuron,MPI_BYTE,n,0,MPI_COMM_WORLD,featsendrequests+isend);
+          isend++;
+        }
+      MPI_Waitall(isend,catsendrequests,MPI_STATUSES_IGNORE);
+      MPI_Waitall(isend,featsendrequests,MPI_STATUSES_IGNORE);
+    }
     numfeature = allfeature;
   }
   timebalance += MPI_Wtime()-time;
