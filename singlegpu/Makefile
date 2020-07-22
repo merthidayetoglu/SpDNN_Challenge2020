@@ -15,10 +15,10 @@ LD_FLAGS = -lgomp
 
 all:	$(TARGETS)
 
-%.o: %.cpp vars.h
+%.o: %.cpp vars.h cuda_runtime.hpp
 	${CXX} ${CXXFLAGS} ${OPTFLAGS} $< -c -o $@
 
-%.o : %.cu vars.h
+%.o : %.cu vars.h cuda_runtime.hpp
 	${NVCC} ${NVCCFLAGS} $< -c -o $@
 
 inference: $(OBJECTS)
