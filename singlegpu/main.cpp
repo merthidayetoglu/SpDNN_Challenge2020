@@ -113,9 +113,13 @@ int main(int argc, char** argv) {
   auto startio = sc::now();
   if(myid==0)printf("\n");
   if(myid==0)printf("READING WEIGHTS\n");
+  fflush(0);
   readweights();
+  fflush(0);
   if(myid==0)printf("READING INPUT\n");
+  fflush(0);
   readinput();
+  fflush(0);
   // MPI_Barrier(MPI_COMM_WORLD);
   // timeio = MPI_Wtime()-timeio;
   Duration timeio = sc::now() - startio;
@@ -212,8 +216,12 @@ void readweights(){
   }
   if(myid==0)printf("weights: %ld (%f GB)\n",totnz,totnz*(sizeof(INDPREC)+sizeof(VALPREC))/1.0e9);
   char chartemp[500];
-  sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron);
+  assert(sizeof(chartemp) < sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron));
   FILE *weightf = fopen(chartemp,"rb");
+  if (!weightf) {
+    fprintf(stderr, "failed to open %s", chartemp);
+    exit(EXIT_FAILURE);
+  }
   for(int l = 0; l < layer; l++){
     int *row = new int[csrdispl[l][neuron]];
     int *col = new int[csrdispl[l][neuron]];
