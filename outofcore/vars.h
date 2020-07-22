@@ -4,7 +4,7 @@
 #include <omp.h>
 //#include "mma.h"
 
-using namespace std;
+//using namespace std;
 
 void readweights();
 void preproc();

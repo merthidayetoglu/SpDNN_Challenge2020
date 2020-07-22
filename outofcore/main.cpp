@@ -138,9 +138,10 @@ int main(int argc, char** argv) {
   int *allcategories = new int[batchesdispl[numproc]];
   MPI_Allgatherv(globalcategories,mybatch,MPI_INT,allcategories,batches,batchesdispl,MPI_INT,MPI_COMM_WORLD);
   if(myid==0){
-    sprintf(chartemp,"%s/neuron%d-l%d-categories.tsv",dataset,neuron,layer);
-    //sprintf(chartemp,"%s/neuron16384-l120-categories.tsv",dataset);
-    FILE *catf = fopen(chartemp,"r");
+    char filename[500];
+    sprintf(filename,"%s/neuron%d-l%d-categories.tsv",dataset,neuron,layer);
+    //sprintf(filename,"%s/neuron16384-l120-categories.tsv",dataset);
+    FILE *catf = fopen(filename,"r");
     bool pass = true;
     for(int k = 0; k < batchesdispl[numproc]; k++){
       int cat;
@@ -190,9 +191,9 @@ void readweights(){
     csrvalue[l] = new VALPREC[csrdispl[l][neuron]];
   }
   if(myid==0)printf("weights: %ld (%f GB)\n",totnz,totnz*(sizeof(INDPREC)+sizeof(VALPREC))/1.0e9);
-  char chartemp[80];
-  sprintf(chartemp,"%s/neuron%d.bin",dataset,neuron);
-  FILE *weightf = fopen(chartemp,"rb");
+  char filename[500];
+  sprintf(filename,"%s/neuron%d.bin",dataset,neuron);
+  FILE *weightf = fopen(filename,"rb");
   for(int l = 0; l < layer; l++){
     int *row = new int[csrdispl[l][neuron]];
     int *col = new int[csrdispl[l][neuron]];
@@ -216,12 +217,12 @@ void readweights(){
   fclose(weightf);
 };
 void readinput(){
-  char chartemp[80];
+  char filename[500];
   FEATPREC *tempfeat;
   if(myid==0){
     printf("features: %ld (%f GB)\n",neuron*(long)batch*2,neuron*(long)batch*2*sizeof(FEATPREC)/1.0e9);
-    sprintf(chartemp,"%s/sparse-images-%d.bin",dataset,neuron);
-    FILE *inputf = fopen(chartemp,"rb");
+    sprintf(filename,"%s/sparse-images-%d.bin",dataset,neuron);
+    FILE *inputf = fopen(filename,"rb");
     int *row = new int[input];
     int *col = new int[input];
     float *val = new float[input];
