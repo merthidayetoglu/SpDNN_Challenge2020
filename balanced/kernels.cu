@@ -380,10 +380,19 @@ void infer_gpu(int l){
   double time = MPI_Wtime();
   int allfeature = 0;
   MPI_Allreduce(&feature,&allfeature,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+  #if BALANCE==0
   if(allfeature!=numfeature){
+  #else
+  if(l==BALANCE){
+  #endif
     if(myid==0)printf("layer %d oldfeature %d newfeature %d load balancing...\n",l,numfeature,allfeature);
     int features[numproc];
     MPI_Allgather(&feature,1,MPI_INT,features,1,MPI_INT,MPI_COMM_WORLD);
+    if(myid==0){
+      for(int p = 0; p < numproc; p++)
+        printf("%d ",features[p]);
+      printf("\n");
+    }
     int newfeatures[numproc];
     int tempfeature1 = allfeature/numproc;
     int tempfeature2 = tempfeature1*numproc;
@@ -394,6 +403,11 @@ void infer_gpu(int l){
       }
       else
         newfeatures[m] = tempfeature1;
+    if(myid==0){
+      for(int p = 0; p < numproc; p++)
+        printf("%d ",newfeatures[p]);
+      printf("\n");
+    }
     int commap[numproc][numproc];
     for(int m = 0; m < numproc; m++)
       for(int n = 0; n < numproc; n++){
@@ -411,6 +425,12 @@ void infer_gpu(int l){
           commap[m][n] = carry;
         }
       }
+    /*if(myid==0)
+      for(int m = 0; m < numproc; m++){
+        for(int n = 0; n < numproc; n++)
+          printf("%d ",commap[m][n]);
+        printf("\n");
+      }*/
     //IF A RECEIVER
     if(newfeatures[myid] > feature){
       int irecv = 0;
@@ -424,7 +444,7 @@ void infer_gpu(int l){
         }
       MPI_Waitall(irecv,featrecvrequests,MPI_STATUSES_IGNORE);
       int counter = 0;
-      for(int n = 0; n < mybatch; n++)
+      for(int n = 0; n < batch; n++)
         if(!active[n]){
           cudaMemcpyAsync(nextfeat_d+n*neuron,recvbuff+counter*neuron,sizeof(FEATPREC)*neuron,cudaMemcpyHostToDevice,kernelstream);
           categories[feature] = n;
@@ -452,8 +472,14 @@ void infer_gpu(int l){
       MPI_Waitall(isend,catsendrequests,MPI_STATUSES_IGNORE);
       MPI_Waitall(isend,featsendrequests,MPI_STATUSES_IGNORE);
     }
-    numfeature = allfeature;
+    /*MPI_Allgather(&feature,1,MPI_INT,features,1,MPI_INT,MPI_COMM_WORLD);
+    if(myid==0){
+      for(int p = 0; p < numproc; p++)
+        printf("%d ",features[p]);
+      printf("\n");
+    }*/
   }
+  numfeature = allfeature;
   timebalance += MPI_Wtime()-time;
   #endif
 
