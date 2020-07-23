@@ -457,6 +457,7 @@ void infer_gpu(int l){
   timebalance += MPI_Wtime()-time;
   #endif
 
+  cudaMemsetAsync(categories_d,0,sizeof(int)*((feature+MINIBATCH-1)/MINIBATCH)*MINIBATCH,kernelstream);
   cudaMemcpyAsync(categories_d,categories,sizeof(int)*feature,cudaMemcpyHostToDevice,kernelstream);
 
   cudaEventElapsedTime(&elapsedTime,kernelstart,kernelstop);
