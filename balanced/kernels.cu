@@ -91,8 +91,9 @@ __device__ float __ReLU(float x){
    return x<0.0?0.0:x>32.0?32.0:x;
 };
 
-__global__ void __launch_bounds__(256,4) dummy_kernel(FEATPREC *nextfeat, FEATPREC *currfeat, int buffsize, int *buffdispl, int *mapdispl, MAPPREC *map, int *displ, INDPREC *index, VALPREC *value, float bias , int neuron, int *categories, int *active){
+__global__ void __launch_bounds__(256,4) dummy_kernel(FEATPREC *nextfeat, FEATPREC *currfeat, int buffsize, int *buffdispl, int *mapdispl, MAPPREC *map, int *displ, INDPREC *index, VALPREC *value, float bias , int *categories, int *active){
   extern __shared__ float shared[];
+  int neuron = blockDim.x*gridDim.x;
   int wind = threadIdx.x%WARPSIZE;
   float reduce[MINIBATCH] = {0.0};
   for(int buff = buffdispl[blockIdx.x]; buff < buffdispl[blockIdx.x+1]; buff++){
@@ -348,7 +349,7 @@ void infer_gpu(int l){
   cudaMemsetAsync(active_d,0,sizeof(int)*mybatch,kernelstream);
 
   cudaEventRecord(kernelstart,kernelstream);
-  dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH,kernelstream>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,neuron,categories_d,active_d);
+  dummy_kernel<<<grid,block,sizeof(float)*buffsize*MINIBATCH,kernelstream>>>(nextfeat_d,currfeat_d,buffsize,buffdispl_d[l],mapdispl_d[l],mapbuff_d,warpdispl_d[l],indbuff_d,valbuff_d,bias,categories_d,active_d);
   cudaEventRecord(kernelstop,kernelstream);
 
   cudaMemcpyAsync(active,active_d,sizeof(int)*mybatch,cudaMemcpyDeviceToHost,kernelstream);

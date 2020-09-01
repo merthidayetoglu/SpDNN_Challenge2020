@@ -1,24 +1,24 @@
 #!/bin/bash
-#SBATCH --partition=gpu 
-#SBATCH --time=1:00:00 
-#SBATCH --reservation=root_34 
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=4 
-#SBATCH --sockets-per-node=2 
-#SBATCH --cores-per-socket=20 
-#SBATCH --threads-per-core=4 
-#SBATCH --mem-per-cpu=1200
-#SBATCH --gres=gpu:v100:4
+
+#BSUB -P CSC362
+#BSUB -q debug
+#BSUB -W 01:00
+#BSUB -nnodes 128
+#BSUB -alloc_flags "gpudefault"
+#BUSB -env "all,LSF_CPU_ISOLATION=on"
+#BSUB -J outt_128nodes
+#BSUB -o outt_128nodes.%J
+#BSUB -e outt_128nodes.%J
 
 date
 
 export DATASET=/gpfs/alpine/csc362/scratch/merth/spDNN_data/
 #1024 4096 16384 65536
-export NEURON=16384
+export NEURON=1024
 #-0.3 -0.35 -0.4 -0.45
-export BIAS=-0.4
+export BIAS=-0.3
 #6374505 25019051 98858913 392191985
-export INPUT=98858913
+export INPUT=6374505
 
 #120 480 1920
 export LAYER=120
@@ -32,17 +32,63 @@ export BUFFER=24 #KB
 #jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info nvprof --analysis-metrics -o /gpfs/alpine/scratch/merth/csc362/profile/analysis_%p.nvvp -f ./inference
 #mv /gpfs/alpine/scratch/merth/csc362/profile/analysis_*.nvvp .
 
-jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+#jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
 
-exit
 for l in 120 480 1920
 do
   export LAYER=$l
-  #jsrun -n1 -a1 -g1 -c7 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
-  jsrun -n1 -a3 -g3 -c21 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
-  jsrun -n1 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
-  #jsrun -n2 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
-  #jsrun -n4 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n16 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n32 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n64 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n128 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+done
+
+#1024 4096 16384 65536
+export NEURON=4096
+#-0.3 -0.35 -0.4 -0.45
+export BIAS=-0.35
+#6374505 25019051 98858913 392191985
+export INPUT=25019051
+
+for l in 120 480 1920
+do
+  export LAYER=$l
+  jsrun -n16 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n32 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n64 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n128 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+done
+
+#1024 4096 16384 65536
+export NEURON=16384
+#-0.3 -0.35 -0.4 -0.45
+export BIAS=-0.4
+#6374505 25019051 98858913 392191985
+export INPUT=98858913
+
+for l in 120 480 1920
+do
+  export LAYER=$l
+  jsrun -n16 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n32 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n64 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n128 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+done
+
+#1024 4096 16384 65536
+export NEURON=65536
+#-0.3 -0.35 -0.4 -0.45
+export BIAS=-0.45
+#6374505 25019051 98858913 392191985
+export INPUT=392191985
+
+for l in 120 480 1920
+do
+  export LAYER=$l
+  jsrun -n16 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n32 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n64 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
+  jsrun -n128 -a6 -g6 -c42 -EOMP_NUM_THREADS=7 -r1 -bpacked:7 js_task_info ./inference
 done
 
 date

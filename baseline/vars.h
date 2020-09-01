@@ -8,7 +8,6 @@
 //using namespace std;
 
 void readweights();
-void preproc();
 void readinput();
 
 void setup_gpu();
@@ -18,10 +17,7 @@ void infer_gpu(int);
 //#define BALANCE 30 //BALANCE LAYER 0 FOR EVERY LAYER COMMENT OUT FOR TURN OFF
 #define OUTOFCORE //COMMENT THIS OUT IF YOU HAVE ENOUGH MEMORY
 #define OVERLAP //WORKS ONLY WHEN OUTOFCORE IS ENABLED
-#define WARPSIZE 32
-#define MINIBATCH 12
-#define MAPPREC unsigned short
-#define INDPREC unsigned short
+#define INDPREC int
 #define VALPREC float
 #define FEATPREC float
 
