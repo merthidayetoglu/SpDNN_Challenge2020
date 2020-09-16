@@ -49,10 +49,12 @@ Do let us know if you get any errors in output.log. Ideally it should work witho
 
 # Citation
 If you use our work in your experiments, please cite with the following bibtex
+```
 @inproceedings{sparsednn20,
  author = {Mert Hidayetoglu, Carl Pearson, Vikram Sharma Mailthody, Eiman Ebrahimi, Jinjun Xiong, Rakesh Nagi, Wen-mei W Hwu}
  title = {Efficient Inference on GPUs for the Sparse Deep Neural Network Graph Challenge 2020}
  booktitle = {Arxiv pre-print},
  year = {2020},
 }
+```
 
