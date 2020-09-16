@@ -42,7 +42,7 @@ After clearing dependencies and setting PROJREPO environment variable, run the f
 
 ```
 cd singlegpu 
-bash run_ampere.sh > output.log 
+bash run_ampere.sh > output.log // you can change to your version of GPU. Ensure you set correct SM and COMPUTE Arch in the makefile settings. 
 ```
 
 Do let us know if you get any errors in output.log. Ideally it should work without any issues. 
@@ -58,3 +58,5 @@ If you use our work in your experiments, please cite with the following bibtex
 }
 ```
 
+# Copyright
+MIT License 
