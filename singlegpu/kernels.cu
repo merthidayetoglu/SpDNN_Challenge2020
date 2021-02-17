@@ -83,7 +83,7 @@ __device__ float __ReLU(float x){
    return x<0.0?0.0:x>32.0?32.0:x;
 };
 
-__global__ void __launch_bounds__(256,4) dummy_kernel(FEATPREC *nextfeat, FEATPREC *currfeat, int buffsize, int *buffdispl, int *mapdispl, MAPPREC *map, int *displ, INDPREC *index, VALPREC *value, float bias , int neuron, int *categories, int *active){
+__global__ void __launch_bounds__(1024,1) dummy_kernel(FEATPREC *nextfeat, FEATPREC *currfeat, int buffsize, int *buffdispl, int *mapdispl, MAPPREC *map, int *displ, INDPREC *index, VALPREC *value, float bias , int neuron, int *categories, int *active){
   extern __shared__ float shared[];
   int wind = threadIdx.x%WARPSIZE;
   float reduce[MINIBATCH] = {0.0};
@@ -115,7 +115,7 @@ void setup_gpu(){
 
   OR_FATAL(cudaSetDevice(myid%6));
   printf("myid %d mydevice %d\n",myid,myid%4);
-  OR_FATAL(cudaFuncSetAttribute(dummy_kernel,cudaFuncAttributeMaxDynamicSharedMemorySize,98304));
+  //OR_FATAL(cudaFuncSetAttribute(dummy_kernel,cudaFuncAttributeMaxDynamicSharedMemorySize,98304));
   if(myid==0){
     int deviceCount;
     OR_FATAL(cudaGetDeviceCount(&deviceCount));
@@ -276,7 +276,7 @@ void setup_gpu(){
     memfeat += bytes/1.0e9;
     OR_FATAL(cudaMemset(currfeat_d,0,bytes));
     OR_FATAL(cudaMemset(nextfeat_d,0,bytes));
-    OR_FATAL(cudaMemcpy(currfeat_d,currfeat,bytes,cudaMemcpyHostToDevice));
+    OR_FATAL(cudaMemcpy(currfeat_d,currfeat,sizeof(FEATPREC)*mybatch*neuron,cudaMemcpyHostToDevice));
   }
 
   double memothers[numproc];
