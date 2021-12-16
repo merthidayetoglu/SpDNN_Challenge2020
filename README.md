@@ -52,7 +52,7 @@ If you use our work in your experiments, please cite with the following bibtex
 ```
 @inproceedings{sparsednn20,
  author = {Mert Hidayetoglu, Carl Pearson, Vikram Sharma Mailthody, Eiman Ebrahimi, Jinjun Xiong, Rakesh Nagi, Wen-mei W Hwu}
- title = {Efficient Inference on GPUs for the Sparse Deep Neural Network Graph Challenge 2020}
+ title = {At-Scale Sparse Deep Neural Network Inference With Efficient GPU Implementation}
  booktitle = {Arxiv pre-print},
  year = {2020},
 }
