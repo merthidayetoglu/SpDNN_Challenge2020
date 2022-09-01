@@ -51,6 +51,8 @@ Do let us know if you get any errors in output.log. Ideally it should work witho
 
 ## MLSys22 Tutorial: Sparsity in ML
 
+Tutorial Link: https://mlsys.org/virtual/2022/tutorial/2199
+
 Session 2 --- Tiled SpMM Slides: https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf
 
 ## Publication Link:
