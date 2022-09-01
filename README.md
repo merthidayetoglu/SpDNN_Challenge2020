@@ -57,7 +57,7 @@ Session 2 --- Modeling and Performance of Tiled SpMM Slides: [Here](https://mert
 
 ## Publication Link:
 
-[Here](https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation "IBM Research")
+HPEC'20 Graph Challenge (Champion): [Here](https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation "IBM Research")
 
 # Citation
 If you use our work in your experiments, please cite with the following bibtex
