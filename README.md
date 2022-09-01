@@ -47,6 +47,12 @@ bash run_ampere.sh > output.log // you can change to your version of GPU. Ensure
 
 Do let us know if you get any errors in output.log. Ideally it should work without any issues. 
 
+# Resources
+
+## MLSys22 Tutorial
+
+Sparsity in ML: Session 2 --- Tiled SpMM Slides: https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf
+
 # Citation
 If you use our work in your experiments, please cite with the following bibtex
 ```
