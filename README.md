@@ -49,18 +49,24 @@ Do let us know if you get any errors in output.log. Ideally it should work witho
 
 # Resources
 
-## MLSys22 Tutorial
+## MLSys22 Tutorial: Sparsity in ML
 
-Sparsity in ML: Session 2 --- Tiled SpMM Slides: https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf
+Session 2 --- Tiled SpMM Slides: https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf
+
+## Publication Link:
+
+https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation
 
 # Citation
 If you use our work in your experiments, please cite with the following bibtex
 ```
-@inproceedings{sparsednn20,
- author = {Mert Hidayetoglu, Carl Pearson, Vikram Sharma Mailthody, Eiman Ebrahimi, Jinjun Xiong, Rakesh Nagi, Wen-mei W Hwu}
- title = {At-Scale Sparse Deep Neural Network Inference With Efficient GPU Implementation}
- booktitle = {Arxiv pre-print},
- year = {2020},
+@inproceedings{hidayetouglu2020scale,
+  title={At-scale sparse deep neural network inference with efficient GPU implementation},
+  author={Hidayetoglu, Mert and Pearson, Carl and Mailthody, Vikram Sharma and Ebrahimi, Eiman and Xiong, Jinjun and Nagi, Rakesh and Hwu, Wen-mei},
+  booktitle={2020 IEEE High Performance Extreme Computing Conference (HPEC)},
+  pages={1--7},
+  year={2020},
+  organization={IEEE}
 }
 ```
 
