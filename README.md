@@ -51,13 +51,13 @@ Do let us know if you get any errors in output.log. Ideally it should work witho
 
 ## MLSys22 Tutorial: Sparsity in ML
 
-Tutorial Link: https://mlsys.org/virtual/2022/tutorial/2199
+Tutorial Link : [Here](https://mlsys.org/virtual/2022/tutorial/2199 "MLSys22")
 
-Session 2 --- Tiled SpMM Slides: https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf
+Session 2 --- Tiled SpMM Slides: [Here]([https://www.google.com]([https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation](https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf "Sparsity in ML")
 
 ## Publication Link:
 
-https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation
+[Here]([https://www.google.com](https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation "IBM Research")
 
 # Citation
 If you use our work in your experiments, please cite with the following bibtex
