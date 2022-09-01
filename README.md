@@ -53,7 +53,7 @@ Do let us know if you get any errors in output.log. Ideally it should work witho
 
 Tutorial Link : [Here](https://mlsys.org/virtual/2022/tutorial/2199 "MLSys22")
 
-Session 2 --- Tiled SpMM Slides: [Here]([https://www.google.com]([https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation](https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf "Sparsity in ML")
+Session 2 --- Tiled SpMM Slides: [Here]([https://www.google.com](https://research.ibm.com/publications/at-scale-sparse-deep-neural-network-inference-with-efficient-gpu-implementation](https://merthidayetoglu.github.io/publications/MLSys22_Sparsity_TiledSpMM.pdf "Sparsity in ML")
 
 ## Publication Link:
 
